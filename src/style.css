@@ -1,0 +1,45 @@
+/* 背景與字體樣式 */
+body {
+  font-family: 'Roboto', sans-serif;
+  background: #f8fbff; /* 主背景色 */
+  color: #333333; /* 主字體顏色 */
+  margin: 0;
+  padding: 0;
+  line-height: 1.6;
+}
+
+/* 標題樣式 */
+h1, h2, h3 {
+  color: #1f2937; /* 深灰色標題 */
+  margin: 0;
+}
+
+a {
+  text-decoration: none;
+  color: #00c389; /* 主色（綠色點綴） */
+}
+
+a:hover {
+  text-decoration: underline;
+}
+button {
+  font-family: 'Roboto', sans-serif;
+  font-size: 14px;
+  padding: 10px 20px;
+  background: linear-gradient(90deg, #00c389, #00a377);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+  background: linear-gradient(90deg, #00a377, #008f6d);
+  transform: scale(1.05);
+}
+
+button:active {
+  transform: scale(0.98);
+}
