@@ -21,6 +21,11 @@ const routes = [
     name: 'Carousel',
     component: () => import('../views/CarouselManager.vue'), // 輪播元件頁面
   },
+  {
+    path: '/productgroup',
+    name: 'Productgroup',
+    component: () => import('../views/ProductGroup.vue'), // 輪播元件頁面
+  },
 ];
 
 const router = createRouter({

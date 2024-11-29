@@ -47,6 +47,9 @@ const selectComponent = (type: string) => {
   } else if (type === 'category') {
     router.push({ path: '/category' }); // 可根據需要配置其他路由
   }
+  else if (type === 'product') {
+    router.push({ path: '/productgroup' }); // 可根據需要配置其他路由
+  }
   isDialogVisible.value = false; // 關閉 Dialog
 };
 </script>

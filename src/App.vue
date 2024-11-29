@@ -29,41 +29,63 @@ const toggleSidebar = () => {
 </script>
 
 <style scoped>
+#app {
+  height: 100vh;
+  overflow: hidden; /* 防止頁面本身出現垂直滾動條 */
+}
+
 .layout {
   display: flex;
-  height: 100vh;
-  overflow: hidden; /* 防止頁面垂直滾動 */
+  flex-direction: column; /* 由上到下排列，包含 TopBar、內容部分等 */
+  height: 100%;
+}
+
+.TopBar {
+  position: fixed; /* 固定在頂部 */
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px; /* 假設 TopBar 的高度 */
+  background-color: #fff;
+  z-index: 3; /* 層級在最上方 */
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* 增加陰影 */
 }
 
 .SidebarMenu {
-  width: 200px;
-  transition: width 0.3s ease; /* 側邊欄開關的過渡效果 */
+  position: fixed; /* 側邊欄也固定 */
+  top: 60px; /* 緊挨著 TopBar 底部 */
+  left: 0;
+  height: calc(100vh - 60px); /* 填滿剩下的高度 */
+  width: 200px; /* 側邊欄寬度 */
+  background-color: #fff;
+  z-index: 2; /* 保持較高的層級以避免被主內容遮擋 */
+  transition: width 0.3s ease; /* 側邊欄展開和關閉的平滑過渡 */
 }
 
 .SidebarMenu[open='false'] {
   width: 0;
+  overflow: hidden;
 }
 
 .content-wrapper {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  transition: margin-left 0.3s ease; /* 平滑過渡效果 */
+  margin-top: 60px; /* 留出 TopBar 的高度 */
+  margin-left: 200px; /* 預設側邊欄展開的寬度 */
+  height: calc(100vh - 60px); /* 高度為視窗減去 TopBar 的高度 */
+  overflow: auto; /* 主內容部分可以滾動，而不是整個頁面 */
+  transition: margin-left 0.3s ease;
 }
 
 .content-sidebar-open {
-  margin-left: 200px; /* 側邊欄展開時，主內容右移 */
+  margin-left: 200px; /* 側邊欄展開時，主內容保持右移 */
 }
 
 main {
-  flex: 1;
   padding: 2rem;
   background: linear-gradient(135deg, #e8f9ff, #ffffff);
   color: #333;
   font-family: 'Roboto', sans-serif;
   border-radius: 12px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: width 0.3s ease; /* 平滑調整主內容的寬度 */
 }
 
 footer {
@@ -72,14 +94,10 @@ footer {
   background-color: #333;
   color: #fff;
   text-align: center;
-  box-sizing: border-box;
-  transition: margin-left 0.3s ease; /* 隨著主內容一起調整 */
-}
-
-.content-sidebar-open footer {
-  margin-left: 1px; /* 當側邊欄展開時，footer也跟著調整 */
+  position: fixed; /* 固定在底部 */
+  bottom: 0;
+  left: 0;
+  z-index: 1;
 }
 
 </style>
-
-
