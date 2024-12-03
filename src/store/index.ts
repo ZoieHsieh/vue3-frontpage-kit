@@ -10,3 +10,6 @@ export const useMainStore = defineStore('main', {
     },
   },
 });
+import { LoadingStore } from './loading'
+// import { useAuthStore } from './auth'
+export { LoadingStore }
