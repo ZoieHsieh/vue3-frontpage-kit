@@ -12,7 +12,8 @@
     "pinia": "^2.2.6",
     "vue": "^3.5.12",
     "vue-router": "^4.4.5",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "js-cookie": "^3.0.5"
   },
   "devDependencies": {
     "@tsconfig/node18": "^18.2.4",

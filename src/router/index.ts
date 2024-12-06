@@ -1,36 +1,52 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { RouteRecordRaw } from 'vue-router'
 
-const routes = [
+// 定義 Kit 的路由
+export const kitRoutes: Array<RouteRecordRaw> = [
   {
-    path: '/',
-    name: 'Home',
+    path: '/kit/home',
+    name: 'kitHome',
     component: () => import('../views/Home.vue'),
+    meta: {
+      title: '首頁設定',
+      auth: true,
+      hide: false,
+      icon: 'pi pi-fw pi-home'
+    }
   },
   {
-    path: '/settings',
-    name: 'Settings',
-    component: () => import('../views/Settings.vue'),
-  },
-  {
-    path: '/about',
-    name: 'About',
-    component: () => import('../views/About.vue'),
-  },
-  {
-    path: '/carousel',
-    name: 'Carousel',
+    path: '/kit/carousel',
+    name: 'kitCarousel',
     component: () => import('../views/CarouselManager.vue'), // 輪播元件頁面
+    meta: {
+      title: '輪播管理',
+      auth: true,
+      hide: true,
+      icon: 'pi pi-fw pi-images'
+    }
   },
   {
-    path: '/productgroup',
-    name: 'Productgroup',
-    component: () => import('../views/ProductGroup.vue'), // 輪播元件頁面
+    path: '/kit/productgroup',
+    name: 'kitProductgroup',
+    component: () => import('../views/ProductGroup.vue'), // 商品群組頁面
+    meta: {
+      title: '商品群組',
+      auth: true,
+      hide: true,
+      icon: 'pi pi-fw pi-tags'
+    }
   },
-];
+  {
+    path: '/kit/settings',
+    name: 'kitSettings',
+    component: () => import('../views/Settings.vue'),
+    meta: {
+      title: 'Kit 設定',
+      auth: true,
+      hide: true,
+      icon: 'pi pi-fw pi-cog'
+    }
+  }
+  // 其他 Kit 的路由
+]
 
-const router = createRouter({
-  history: createWebHistory(),
-  routes,
-});
-
-export default router;
+// 這裡不創建 router 實例，只是導出路由列表

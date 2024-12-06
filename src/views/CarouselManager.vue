@@ -5,7 +5,7 @@
       <div v-for="(image, index) in images" :key="index" class="carousel-image">
         <div class="image-container">
           <label class="image-placeholder">
-            <span v-if="!image.url">1:1</span>
+            <span v-if="!image.url" class="icon-placeholder">+</span>
             <img v-if="image.url" :src="image.url" alt="uploaded image" />
             <input type="file" @change="handleFileChange($event, index)" class="file-input" />
           </label>
@@ -15,58 +15,103 @@
           type="text"
           v-model="images[index].link"
           class="url-input"
-          placeholder="輸入網址..."
+          placeholder="輸入導航網址..."
         />
         <button @click="moveLeft(index)" :disabled="index === 0" class="control-btn">左移</button>
-        <button @click="moveRight(index)" :disabled="index === images.length - 1" class="control-btn">右移</button>
+        <button
+          @click="moveRight(index)"
+          :disabled="index === images.length - 1"
+          class="control-btn"
+        >
+          右移
+        </button>
       </div>
     </div>
     <button @click="addImage" class="add-image-btn">新增圖片</button>
+    <button @click="submitCarousel" class="submit-btn">提交輪播設定</button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref } from 'vue'
+import { uploadImage } from '../api/axios/psiApi' // 使用 psi 的 API 上傳圖片
+import { addComponent } from '../api/axios/componentApi' // 使用 kit 的 API 新增組件
 
-const images = ref([
-  { url: '', label: '1:1', link: '' },
-  { url: '', label: '1:1', link: '' },
-  { url: '', label: '1:1', link: '' },
-  { url: '', label: '1:1', link: '' },
-]);
+// 初始化圖片數據
+const images = ref([{ url: '', link: '', sequence: 1 }])
 
+// 新增圖片
 const addImage = () => {
-  images.value.push({ url: '', label: '1:1', link: '' });
-};
+  images.value.push({ url: '', link: '', sequence: images.value.length + 1 })
+}
 
+// 刪除圖片
 const deleteImage = (index: number) => {
-  images.value.splice(index, 1);
-};
+  images.value.splice(index, 1)
+  updateSequence()
+}
 
+// 排序向左移動
 const moveLeft = (index: number) => {
   if (index > 0) {
-    const item = images.value.splice(index, 1)[0];
-    images.value.splice(index - 1, 0, item);
+    const item = images.value.splice(index, 1)[0]
+    images.value.splice(index - 1, 0, item)
+    updateSequence()
   }
-};
+}
 
+// 排序向右移動
 const moveRight = (index: number) => {
   if (index < images.value.length - 1) {
-    const item = images.value.splice(index, 1)[0];
-    images.value.splice(index + 1, 0, item);
+    const item = images.value.splice(index, 1)[0]
+    images.value.splice(index + 1, 0, item)
+    updateSequence()
+  }
+}
+
+// 更新排序
+const updateSequence = () => {
+  images.value.forEach((image, index) => {
+    image.sequence = index + 1
+  })
+}
+
+// 處理文件改變事件
+const handleFileChange = async (event: Event, index: number) => {
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (file) {
+    try {
+      const url = await uploadImage(file) // 使用 psi 的 API 上傳圖片
+      images.value[index].url = url
+    } catch (error) {
+      console.error('Failed to upload image:', error)
+    }
+  }
+}
+
+// 提交輪播設定
+const submitCarousel = async () => {
+  const payload = {
+    name: 'Image Carousel Example',
+    type: 'IMAGE_CAROUSEL',
+    companyId: 1,
+    urls: images.value.map((image) => ({
+      imageUrl: image.url,
+      navUrl: image.link,
+      sequence: image.sequence,
+    })),
+    sortType: '',
+    products: [],
+  };
+
+  try {
+    const response = await addComponent(payload);
+    console.log('新增組件成功:', response);
+  } catch (error) {
+    console.error('新增組件失敗:', error);
   }
 };
 
-const handleFileChange = (event: Event, index: number) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      images.value[index].url = reader.result as string;
-    };
-    reader.readAsDataURL(file);
-  }
-};
 </script>
 
 <style scoped>
@@ -163,7 +208,6 @@ h3 {
   background-color: #ff0000;
 }
 
-
 .carousel-images {
   display: flex;
   gap: 16px;
@@ -177,7 +221,6 @@ h3 {
   min-width: 120px;
   overflow: visible; /* 確保圖片和按鈕都不被裁剪 */
 }
-
 
 .url-input {
   margin-top: 10px;
