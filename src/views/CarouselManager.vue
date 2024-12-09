@@ -18,13 +18,7 @@
           placeholder="輸入導航網址..."
         />
         <button @click="moveLeft(index)" :disabled="index === 0" class="control-btn">左移</button>
-        <button
-          @click="moveRight(index)"
-          :disabled="index === images.length - 1"
-          class="control-btn"
-        >
-          右移
-        </button>
+        <button @click="moveRight(index)" :disabled="index === images.length - 1" class="control-btn">右移</button>
       </div>
     </div>
     <button @click="addImage" class="add-image-btn">新增圖片</button>
@@ -33,69 +27,67 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { uploadImage } from '../api/axios/psiApi' // 使用 psi 的 API 上傳圖片
-import { addComponent } from '../api/axios/componentApi' // 使用 kit 的 API 新增組件
+import { ref } from 'vue';
+import { uploadImage } from '../api/axios/psiApi';
+import { addComponent } from '../api/axios/componentApi';
 
-// 初始化圖片數據
-const images = ref([{ url: '', link: '', sequence: 1 }])
+const images = ref([{ url: '', link: '', sequence: 1, id: null }]);
 
-// 新增圖片
 const addImage = () => {
-  images.value.push({ url: '', link: '', sequence: images.value.length + 1 })
-}
+  images.value.push({ url: '', link: '', sequence: images.value.length + 1, id: null });
+};
 
-// 刪除圖片
 const deleteImage = (index: number) => {
-  images.value.splice(index, 1)
-  updateSequence()
-}
+  images.value.splice(index, 1);
+  updateSequence();
+};
 
-// 排序向左移動
 const moveLeft = (index: number) => {
   if (index > 0) {
-    const item = images.value.splice(index, 1)[0]
-    images.value.splice(index - 1, 0, item)
-    updateSequence()
+    const item = images.value.splice(index, 1)[0];
+    images.value.splice(index - 1, 0, item);
+    updateSequence();
   }
-}
+};
 
-// 排序向右移動
 const moveRight = (index: number) => {
   if (index < images.value.length - 1) {
-    const item = images.value.splice(index, 1)[0]
-    images.value.splice(index + 1, 0, item)
-    updateSequence()
+    const item = images.value.splice(index, 1)[0];
+    images.value.splice(index + 1, 0, item);
+    updateSequence();
   }
-}
+};
 
-// 更新排序
 const updateSequence = () => {
   images.value.forEach((image, index) => {
-    image.sequence = index + 1
-  })
-}
+    image.sequence = index + 1;
+  });
+};
 
-// 處理文件改變事件
 const handleFileChange = async (event: Event, index: number) => {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (file) {
-    try {
-      const url = await uploadImage(file) // 使用 psi 的 API 上傳圖片
-      images.value[index].url = url
-    } catch (error) {
-      console.error('Failed to upload image:', error)
-    }
-  }
-}
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
 
-// 提交輪播設定
+  const formData = new FormData();
+  formData.append('image', file);
+
+  try {
+    const response = await uploadImage(formData);
+    const { id, url } = response;
+    images.value[index].url = url;
+    images.value[index].id = id;
+  } catch (error) {
+    console.error('Failed to upload image:', error.message);
+  }
+};
+
 const submitCarousel = async () => {
   const payload = {
     name: 'Image Carousel Example',
     type: 'IMAGE_CAROUSEL',
     companyId: 1,
     urls: images.value.map((image) => ({
+      imageId: image.id,
       imageUrl: image.url,
       navUrl: image.link,
       sequence: image.sequence,
@@ -108,11 +100,12 @@ const submitCarousel = async () => {
     const response = await addComponent(payload);
     console.log('新增組件成功:', response);
   } catch (error) {
-    console.error('新增組件失敗:', error);
+    console.error('新增組件失敗:', error.message);
   }
 };
-
 </script>
+
+
 
 <style scoped>
 .carousel-manager {

@@ -1,9 +1,9 @@
 <template>
   <div class="home-page">
     <!-- <h2>Home Page</h2> -->
-   <div style="justify-content: end;display: flex;">
-    <button @click="openDialog" class="add-component-btn">新增元件</button>
-   </div>
+    <div style="justify-content: end; display: flex">
+      <button @click="openDialog" class="add-component-btn">新增元件</button>
+    </div>
 
     <!-- Dialog -->
     <div v-if="isDialogVisible" class="dialog-overlay">
@@ -27,21 +27,29 @@
     <!-- 顯示 API 獲取的列表 -->
     <div class="components-list">
       <div v-for="(component, index) in components" :key="component.id" class="component-item">
-        <div class="actions">
-          <button @click="moveUp(index)" :disabled="index === 0" class="arrow-btn">&uarr;</button>
-          <button
-            @click="moveDown(index)"
-            :disabled="index === components.length - 1"
-            class="arrow-btn"
-          >
-            &darr;
-          </button>
+        <div class="item-header">
+          <h3 class="component-title">{{ component.name }}</h3>
+          <div class="button-group">
+            <button @click="moveUp(index)" :disabled="index === 0" class="arrow-btn">&uarr;</button>
+            <button
+              @click="moveDown(index)"
+              :disabled="index === components.length - 1"
+              class="arrow-btn"
+            >
+              &darr;
+            </button>
+            <button @click="editComponent(component)" class="edit-btn">編輯</button>
+            <button @click="deleteComponent(component.id)" class="delete-btn">刪除</button>
+          </div>
         </div>
-        <div class="item-content">
-          <h3>{{ component.type }}</h3>
-          <p>{{ component.name }}</p>
+        <div class="component-content">
+          <div v-if="component.urls && component.urls.length" class="image-carousel">
+            <div v-for="url in component.urls" :key="url.id" class="carousel-item">
+              <img :src="url.imageUrl" :alt="url.navUrl" class="carousel-image" />
+              <p class="image-nav-url">{{ url.navUrl }}</p>
+            </div>
+          </div>
         </div>
-        
       </div>
     </div>
   </div>
@@ -49,7 +57,6 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import CarouselManager from '../components/components/CarouselManager.vue' // 輪播元件，其他元件可按需引入
 import { useRouter } from 'vue-router' // 引入 Vue Router
 import { getComponentsList } from '../api/axios/componentApi' // 引入 API 方法
 
@@ -58,15 +65,19 @@ const isDialogVisible = ref(false) // 控制 Dialog 顯示
 const selectedComponent = ref<string | null>(null) // 已選擇的元件類型
 const components = ref<any[]>([]) // 保存從 API 獲取的組件列表
 
-// 獲取組件列表
 const fetchComponents = async () => {
   try {
-    const response = await getComponentsList()
+    const response = await getComponentsList(0, 10, 1)
+
     components.value = response.list // 假設 response 中包含 list
+
+    console.log(response) // 打印返回數據
   } catch (error) {
-    console.error('Failed to fetch components:', error)
+    console.error('Error fetching components:', error)
   }
 }
+
+fetchComponents()
 
 // 當組件加載時調用 API 獲取數據
 onMounted(() => {
@@ -112,13 +123,12 @@ const selectComponent = (type: string) => {
 </script>
 
 <style scoped>
-.home-page {
-  text-align: center;
+.components-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
   padding: 16px;
-  background-color: white; /* 頁面背景白色 */
-  position: relative; /* 讓新增元件按鈕可以定位 */
 }
-
 .add-component-btn {
   padding: 8px 16px;
   font-size: 16px;
@@ -158,26 +168,6 @@ const selectComponent = (type: string) => {
   font-size: 18px;
   margin-bottom: 16px;
 }
-
-.component-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.component-list li {
-  padding: 10px;
-  background-color: #f4f4f4;
-  margin: 8px 0;
-  cursor: pointer;
-  border-radius: 5px;
-  transition: background 0.3s;
-}
-
-.component-list li:hover {
-  background-color: #ddd;
-}
-
 .close-dialog-btn {
   margin-top: 16px;
   padding: 8px 16px;
@@ -187,54 +177,131 @@ const selectComponent = (type: string) => {
   border-radius: 5px;
   cursor: pointer;
 }
+.component-list li {
+  padding: 10px;
+  background-color: #f4f4f4;
+  margin: 8px 0;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: background 0.3s;
+}
 
 .close-dialog-btn:hover {
   background-color: #ff0000;
 }
 
-.components-list {
-  margin-top: 32px;
+.component-item {
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  transition: box-shadow 0.3s;
 }
 
-.component-item {
+.component-item:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.item-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background-color: #f9f9f9;
-  border-radius: 8px;
-  box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
-.item-content {
-  display: flex;
-  flex-direction: column;
+.component-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
 }
 
-.actions {
+.button-group {
   display: flex;
-  flex-direction: column;
+  align-items: center;
   gap: 8px;
 }
 
+.edit-btn,
+.delete-btn,
 .arrow-btn {
-  width: 40px; /* 設定固定寬度 */
-  height: 40px; /* 設定固定高度，與寬度相同 */
-  padding: 0; /* 移除內邊距，讓文字居中 */
-  border: none; /* 移除邊框 */
-  background-color: #007bff; /* 按鈕背景顏色 */
-  color: #fff; /* 按鈕文字顏色 */
-  border-radius: 50%; /* 設為 50%，實現圓形效果 */
-  cursor: pointer; /* 滑鼠移上時顯示手形 */
-  font-size: 25px; /* 確保箭頭符號顯示清晰 */
-  display: flex; /* 使用 flex 居中對齊 */
-  justify-content: center; /* 水平居中 */
-  align-items: center; /* 垂直居中 */
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.edit-btn {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.edit-btn:hover {
+  background-color: #0056b3;
+}
+
+.delete-btn {
+  background-color: #ff4d4d;
+  color: #fff;
+}
+
+.delete-btn:hover {
+  background-color: #cc0000;
+}
+
+.arrow-btn {
+  background-color: #ffc107;
+  color: #fff;
+  font-size: 18px;
 }
 
 .arrow-btn:disabled {
-  background-color: #ccc; /* 禁用狀態的背景顏色 */
-  cursor: not-allowed; /* 禁用狀態的滑鼠樣式 */
+  background-color: #ddd;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.component-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.carousel-item {
+  background-color: #f9f9f9;
+  border: 1px solid #e6e6e6;
+  border-radius: 8px;
+  padding: 12px;
+  text-align: center;
+  transition:
+    transform 0.3s,
+    box-shadow 0.3s;
+}
+
+.carousel-item:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.carousel-image {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.image-nav-url {
+  font-size: 14px;
+  color: #555;
+  word-break: break-word;
+}
+.component-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
 }
 </style>
