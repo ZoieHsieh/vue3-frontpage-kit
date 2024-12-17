@@ -18,69 +18,97 @@
           placeholder="輸入導航網址..."
         />
         <button @click="moveLeft(index)" :disabled="index === 0" class="control-btn">左移</button>
-        <button @click="moveRight(index)" :disabled="index === images.length - 1" class="control-btn">右移</button>
+        <button
+          @click="moveRight(index)"
+          :disabled="index === images.length - 1"
+          class="control-btn"
+        >
+          右移
+        </button>
       </div>
     </div>
     <button @click="addImage" class="add-image-btn">新增圖片</button>
     <button @click="submitCarousel" class="submit-btn">提交輪播設定</button>
   </div>
+   <!-- Toast 提示框 -->
+   <div v-if="showToast" :class="['toast', toastType]">{{ toastMessage }}</div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { uploadImage } from '../api/axios/psiApi';
-import { addComponent } from '../api/axios/componentApi';
+import { ref } from 'vue'
+import { uploadImage } from '../api/axios/psiApi'
+import { addComponent } from '../api/axios/componentApi'
 
-const images = ref([{ url: '', link: '', sequence: 1, id: null }]);
+const images = ref([{ url: '', link: '', sequence: 1, id: null }])
+
+// Toast 狀態
+const toastMessage = ref('')
+const toastType = ref('') // 'success' or 'error'
+const showToast = ref(false)
+
+// 顯示 Toast 方法
+const showToastMessage = (message: string, type: 'success' | 'error') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+
+  // 3 秒後自動消失
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
 
 const addImage = () => {
-  images.value.push({ url: '', link: '', sequence: images.value.length + 1, id: null });
-};
+  images.value.push({ url: '', link: '', sequence: images.value.length + 1, id: null })
+}
 
 const deleteImage = (index: number) => {
-  images.value.splice(index, 1);
-  updateSequence();
-};
+  images.value.splice(index, 1)
+  updateSequence()
+}
 
 const moveLeft = (index: number) => {
   if (index > 0) {
-    const item = images.value.splice(index, 1)[0];
-    images.value.splice(index - 1, 0, item);
-    updateSequence();
+    const item = images.value.splice(index, 1)[0]
+    images.value.splice(index - 1, 0, item)
+    updateSequence()
   }
-};
+}
 
 const moveRight = (index: number) => {
   if (index < images.value.length - 1) {
-    const item = images.value.splice(index, 1)[0];
-    images.value.splice(index + 1, 0, item);
-    updateSequence();
+    const item = images.value.splice(index, 1)[0]
+    images.value.splice(index + 1, 0, item)
+    updateSequence()
   }
-};
+}
 
 const updateSequence = () => {
   images.value.forEach((image, index) => {
-    image.sequence = index + 1;
-  });
-};
+    image.sequence = index + 1
+  })
+}
 
 const handleFileChange = async (event: Event, index: number) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (!file) return;
+  const file = (event.target as HTMLInputElement).files?.[0]
+  if (!file) return
 
-  const formData = new FormData();
-  formData.append('image', file);
+  const formData = new FormData()
+  formData.append('image', file)
 
   try {
-    const response = await uploadImage(formData);
-    const { id, url } = response;
-    images.value[index].url = url;
-    images.value[index].id = id;
+    const response = await uploadImage(formData)
+    const { id, url } = response
+    images.value[index].url = url
+    images.value[index].id = id
+    showToastMessage('圖片上傳成功！', 'success')
   } catch (error) {
-    console.error('Failed to upload image:', error.message);
+    console.error('Failed to upload image:', error.message)
+    showToastMessage('圖片上傳失敗！', 'error')
   }
-};
+}
 
+// 提交輪播設定
 const submitCarousel = async () => {
   const payload = {
     name: 'Image Carousel Example',
@@ -90,22 +118,21 @@ const submitCarousel = async () => {
       imageId: image.id,
       imageUrl: image.url,
       navUrl: image.link,
-      sequence: image.sequence,
+      sequence: image.sequence
     })),
     sortType: '',
-    products: [],
-  };
+    products: []
+  }
 
   try {
-    const response = await addComponent(payload);
-    console.log('新增組件成功:', response);
+    await addComponent(payload)
+    showToastMessage('提交成功！', 'success')
   } catch (error) {
-    console.error('新增組件失敗:', error.message);
+    console.error('新增組件失敗:', error.message)
+    showToastMessage('提交失敗，請重試！', 'error')
   }
-};
+}
 </script>
-
-
 
 <style scoped>
 .carousel-manager {
@@ -196,7 +223,18 @@ h3 {
   transition: background 0.3s ease;
   z-index: 10; /* 確保按鈕顯示在最上層 */
 }
+.submit-btn {
+  padding: 10px 20px;
+  background: #59b971;
+  color: white;
+  border-radius: 8px;
+  font-weight: 700;
 
+  cursor: pointer;
+  border: none;
+  transition: background 0.3s ease;
+  margin: 0 auto;
+}
 .delete-btn:hover {
   background-color: #ff0000;
 }
@@ -259,4 +297,44 @@ h3 {
   background-color: #cccccc;
   cursor: not-allowed;
 }
+/* Toast 提示框樣式 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 16px;
+  color: #fff;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  animation: slideIn 0.5s ease, fadeOut 0.5s ease 2.5s forwards;
+}
+
+.toast.success {
+  background-color: #4caf50; /* 綠色 */
+}
+
+.toast.error {
+  background-color: #f44336; /* 紅色 */
+}
+
+/* Toast 動畫 */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
+
 </style>

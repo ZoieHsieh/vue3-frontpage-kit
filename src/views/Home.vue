@@ -13,7 +13,7 @@
           <li @click="selectComponent('carousel')">輪播元件</li>
           <li @click="selectComponent('category')">分類按鈕</li>
           <li @click="selectComponent('product')">分類商品</li>
-          <li @click="selectComponent('hot')">熱銷商品</li>
+          <li @click="selectComponent('image')">圖片元件</li>
         </ul>
         <button @click="closeDialog" class="close-dialog-btn">取消</button>
       </div>
@@ -29,6 +29,7 @@
       <div v-for="(component, index) in components" :key="component.id" class="component-item">
         <div class="item-header">
           <h3 class="component-title">{{ component.name }}</h3>
+
           <div class="button-group">
             <button @click="moveUp(index)" :disabled="index === 0" class="arrow-btn">&uarr;</button>
             <button
@@ -39,14 +40,52 @@
               &darr;
             </button>
             <button @click="editComponent(component)" class="edit-btn">編輯</button>
-            <button @click="deleteComponent(component.id)" class="delete-btn">刪除</button>
+            <button @click="confirmDelete(component.id)" class="delete-btn">刪除</button>
           </div>
         </div>
         <div class="component-content">
-          <div v-if="component.urls && component.urls.length" class="image-carousel">
-            <div v-for="url in component.urls" :key="url.id" class="carousel-item">
-              <img :src="url.imageUrl" :alt="url.navUrl" class="carousel-image" />
-              <p class="image-nav-url">{{ url.navUrl }}</p>
+          <div class="image-list">
+            <div v-for="url in component.urls" :key="url.id" class="image-list-item">
+              <img :src="url.imageUrl" alt="圖片" />
+              <div class="image-details">
+                <p>檔案名稱：{{ url.filename }}</p>
+                <p>
+                  連結：<a :href="url.navUrl" target="_blank">{{ url.navUrl }}</a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div v-if="component.type === 'PRODUCT_GROUP'" class="product-group">
+          <h4>商品群組</h4>
+          <div class="product-list">
+            <div
+              v-for="product in productDetailsMap[component.id]"
+              :key="product.id"
+              class="product-card"
+            >
+              <!-- 顯示商品圖片或占位符 -->
+              <div class="product-image-container">
+                <img
+                  :src="getProductImage(product.productImageList)"
+                  alt="商品圖片"
+                  class="product-image"
+                />
+              </div>
+              <h4 class="product-name">{{ product.name }}</h4>
+              <p class="product-code">貨號：{{ product.code }}</p>
+              <p class="product-price">價格：{{ product.sellPriceRange || '未設定' }}</p>
+            </div>
+          </div>
+        </div>
+        <!-- 確認刪除對話框 -->
+        <div v-if="isConfirmDialogVisible" class="dialog-overlay">
+          <div class="dialog">
+            <h3>確認刪除</h3>
+            <p>確定要刪除此元件嗎？</p>
+            <div class="button-group">
+              <button @click="deleteComponentItem" class="confirm-btn">是</button>
+              <button @click="isConfirmDialogVisible = false" class="cancel-btn">否</button>
             </div>
           </div>
         </div>
@@ -57,26 +96,128 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router' // 引入 Vue Router
-import { getComponentsList } from '../api/axios/componentApi' // 引入 API 方法
+import { useRouter } from 'vue-router'
+import { getComponentsList, deleteComponent, reorderComponents } from '../api/axios/componentApi' //
+import { fetchPsiData } from '../api/axios/psiApi'
+const isConfirmDialogVisible = ref(false)
+const currentComponentId = ref<number | null>(null)
+const router = useRouter()
+const isDialogVisible = ref(false)
+const selectedComponent = ref<string | null>(null)
+const components = ref<any[]>([])
 
-const router = useRouter() // 初始化 router
-const isDialogVisible = ref(false) // 控制 Dialog 顯示
-const selectedComponent = ref<string | null>(null) // 已選擇的元件類型
-const components = ref<any[]>([]) // 保存從 API 獲取的組件列表
-
+const productDetailsMap = ref<{ [key: number]: any[] }>({})
+// 排序元件列表
+const sortComponents = () => {
+  components.value.sort((a, b) => a.sortOrder - b.sortOrder)
+}
+// 獲取元件列表
 const fetchComponents = async () => {
   try {
     const response = await getComponentsList(0, 10, 1)
+    components.value = response.list || []
+    sortComponents()
 
-    components.value = response.list // 假設 response 中包含 list
-
-    console.log(response) // 打印返回數據
+    for (const component of components.value) {
+      if (component.type === 'PRODUCT_GROUP' && component.products) {
+        await fetchProductDetails(component.id, component.products)
+      }
+    }
+    console.log('Components:', components.value)
   } catch (error) {
     console.error('Error fetching components:', error)
   }
 }
+// 更新排序 API 方法
+const updateSortOrder = async (changes: { id: number; sortOrder: number }[]) => {
+  try {
+    const payload = {
+      changes: changes.map((change) => ({
+        id: change.id,
+        sortOrder: change.sortOrder
+      }))
+    }
 
+    await reorderComponents(payload)
+    console.log('Sort order updated successfully:', payload)
+  } catch (error) {
+    console.error('Error updating sort order:', error)
+  }
+}
+
+// 上移方法
+const moveUp = async (index: number) => {
+  if (index > 0) {
+    const currentComponent = components.value[index]
+    const previousComponent = components.value[index - 1]
+
+    // 交換排序號碼
+    ;[currentComponent.sortOrder, previousComponent.sortOrder] = [
+      previousComponent.sortOrder,
+      currentComponent.sortOrder
+    ]
+
+    // 更新排序
+    await updateSortOrder([
+      { id: currentComponent.id, sortOrder: currentComponent.sortOrder },
+      { id: previousComponent.id, sortOrder: previousComponent.sortOrder }
+    ])
+
+    // 更新本地數據順序
+    sortComponents()
+  }
+}
+
+// 下移方法
+const moveDown = async (index: number) => {
+  if (index < components.value.length - 1) {
+    const currentComponent = components.value[index]
+    const nextComponent = components.value[index + 1]
+
+    // 交換排序號碼
+    ;[currentComponent.sortOrder, nextComponent.sortOrder] = [
+      nextComponent.sortOrder,
+      currentComponent.sortOrder
+    ]
+
+    // 更新排序
+    await updateSortOrder([
+      { id: currentComponent.id, sortOrder: currentComponent.sortOrder },
+      { id: nextComponent.id, sortOrder: nextComponent.sortOrder }
+    ])
+
+    sortComponents()
+  }
+}
+
+// 獲取商品詳細資料
+const fetchProductDetails = async (componentId: number, products: any[]) => {
+  try {
+    const productIdList = products.map((product) => `productIdList=${product.productId}`).join('&')
+    const baseParams = `currentPage=1&orderBy=ID_DESC`
+
+    const fullUrl = `product/list?${baseParams}${productIdList ? `&${productIdList}` : ''}`
+
+    const response = await fetchPsiData(fullUrl)
+
+    const details = response.dataList || []
+    productDetailsMap.value[componentId] = details
+
+    console.log(`Product details for component ${componentId}:`, details)
+  } catch (error) {
+    console.error('Error fetching product details:', error.message)
+  }
+}
+const defaultImageUrl = '../../../../public/layout/default.jpg'
+
+// 返回商品圖片或預設圖片
+const getProductImage = (productImageList: any[]) => {
+  // 如果有圖片，返回第一張圖片的 URL，否則返回預設圖片
+  if (productImageList && productImageList.length > 0) {
+    return productImageList[0].image.url // 假設每個 image 有 url 屬性
+  }
+  return defaultImageUrl
+}
 fetchComponents()
 
 // 當組件加載時調用 API 獲取數據
@@ -85,20 +226,27 @@ onMounted(() => {
 })
 
 // 上移方法
-const moveUp = (index: number) => {
-  if (index > 0) {
-    const temp = components.value[index]
-    components.value[index] = components.value[index - 1]
-    components.value[index - 1] = temp
-  }
+
+// 刪除方法
+const confirmDelete = (componentId: number) => {
+  currentComponentId.value = componentId
+  isConfirmDialogVisible.value = true
 }
 
-// 下移方法
-const moveDown = (index: number) => {
-  if (index < components.value.length - 1) {
-    const temp = components.value[index]
-    components.value[index] = components.value[index + 1]
-    components.value[index + 1] = temp
+const deleteComponentItem = async () => {
+  if (currentComponentId.value !== null) {
+    try {
+      await deleteComponent(currentComponentId.value)
+      components.value = components.value.filter(
+        (component) => component.id !== currentComponentId.value
+      )
+      console.log(`Component with ID ${currentComponentId.value} deleted successfully.`)
+    } catch (error) {
+      console.error('Error deleting component:', error)
+    } finally {
+      isConfirmDialogVisible.value = false
+      currentComponentId.value = null
+    }
   }
 }
 
@@ -114,9 +262,11 @@ const selectComponent = (type: string) => {
   if (type === 'carousel') {
     router.push({ name: 'kitCarousel' }) // 跳轉到 Carousel 頁面
   } else if (type === 'category') {
-    router.push({ path: 'kit/category' }) // 可根據需要配置其他路由
+    router.push({ path: 'category' }) // 可根據需要配置其他路由
   } else if (type === 'product') {
     router.push({ path: '/kit/productgroup' }) // 可根據需要配置其他路由
+  } else if (type === 'image') {
+    router.push({ path: '/kit/singleimage' })
   }
   isDialogVisible.value = false // 關閉 Dialog
 }
@@ -149,7 +299,7 @@ const selectComponent = (type: string) => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.1); /* 調整透明度，讓背景不全黑 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -168,6 +318,7 @@ const selectComponent = (type: string) => {
   font-size: 18px;
   margin-bottom: 16px;
 }
+
 .close-dialog-btn {
   margin-top: 16px;
   padding: 8px 16px;
@@ -270,38 +421,147 @@ const selectComponent = (type: string) => {
   margin-top: 12px;
 }
 
-.carousel-item {
-  background-color: #f9f9f9;
-  border: 1px solid #e6e6e6;
+.image-list {
+  display: flex;
+  flex-direction: column; /* 垂直排列 */
+  gap: 24px; /* 每個列表項之間的間距 */
+}
+
+.image-list-item {
+  display: flex;
+  align-items: center; /* 垂直居中 */
+  justify-content: space-between; /* 左右對齊 */
+  background: #fff; /* 背景色 */
+  border: 1px solid #ddd; /* 邊框 */
+  border-radius: 8px; /* 圓角 */
+  padding: 16px; /* 內邊距 */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 陰影 */
+}
+
+.image-list-item img {
+  width: 150px; /* 圖片固定寬度 */
+  height: auto;
   border-radius: 8px;
-  padding: 12px;
-  text-align: center;
-  transition:
-    transform 0.3s,
-    box-shadow 0.3s;
-}
-
-.carousel-item:hover {
-  transform: translateY(-5px);
-  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-}
-
-.carousel-image {
-  width: 100%;
-  height: 120px;
   object-fit: cover;
-  border-radius: 4px;
-  margin-bottom: 8px;
 }
 
-.image-nav-url {
+.image-details {
+  flex: 1;
+  margin-left: 16px;
+}
+
+.image-details p {
+  margin: 0;
   font-size: 14px;
   color: #555;
-  word-break: break-word;
 }
+
+.image-details a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.image-details a:hover {
+  text-decoration: underline;
+}
+.image-nav-url {
+  text-align: center;
+  font-size: 14px;
+  color: #555;
+  margin-top: 8px;
+}
+
 .component-list {
   list-style: none;
   padding: 0;
   margin: 0;
+}
+.confirm-btn {
+  padding: 8px 16px;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.confirm-btn:hover {
+  background-color: #218838;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background-color: #ffc107;
+  color: black;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cancel-btn:hover {
+  background-color: #e0a800;
+}
+.product-group {
+  padding: 16px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.product-card {
+  padding: 16px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  text-align: center;
+  transition: box-shadow 0.3s ease;
+}
+
+.product-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.product-image-placeholder {
+  width: 100%;
+  height: 120px;
+  background-color: #f4f4f4;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.placeholder-icon {
+  font-size: 32px;
+  color: #ccc;
+}
+
+.product-name {
+  font-size: 16px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.product-code {
+  font-size: 14px;
+  color: #666;
+}
+
+.product-price {
+  font-size: 14px;
+  color: #007acc;
 }
 </style>

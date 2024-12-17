@@ -16,9 +16,20 @@ export const kitRoutes: Array<RouteRecordRaw> = [
   {
     path: '/kit/carousel',
     name: 'kitCarousel',
-    component: () => import('../views/CarouselManager.vue'), // 輪播元件頁面
+    component: () => import('../views/CarouselManager.vue'), 
     meta: {
       title: '輪播管理',
+      auth: true,
+      hide: true,
+      icon: 'pi pi-fw pi-images'
+    }
+  },
+  {
+    path: '/kit/category',
+    name: 'kitCategory',
+    component: () => import('../views/CategoryManager.vue'), 
+    meta: {
+      title: '商品分類管理',
       auth: true,
       hide: true,
       icon: 'pi pi-fw pi-images'
@@ -36,11 +47,11 @@ export const kitRoutes: Array<RouteRecordRaw> = [
     }
   },
   {
-    path: '/kit/settings',
-    name: 'kitSettings',
-    component: () => import('../views/Settings.vue'),
+    path: '/kit/singleimage',
+    name: 'kitSingleImage',
+    component: () => import('../views/SingleImage.vue'),
     meta: {
-      title: 'Kit 設定',
+      title: '圖片元件',
       auth: true,
       hide: true,
       icon: 'pi pi-fw pi-cog'
@@ -48,5 +59,3 @@ export const kitRoutes: Array<RouteRecordRaw> = [
   }
   // 其他 Kit 的路由
 ]
-
-// 這裡不創建 router 實例，只是導出路由列表

@@ -11,8 +11,11 @@ class PsiRequest {
   }
   // GET 方法
   async get<T = any>(url: string, params?: any): Promise<T> {
-    const queryString = new URLSearchParams(params).toString();
-    const fullUrl = `${this.basePath}${url}?${queryString}`;
+    // 檢查 params 是否存在且有有效鍵值
+    const queryString = params && Object.keys(params).length > 0
+      ? `?${new URLSearchParams(params).toString()}`
+      : '';
+    const fullUrl = `${this.basePath}${url}${queryString}`;
     const token = Cookie.get('token');
 
     try {

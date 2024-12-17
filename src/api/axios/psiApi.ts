@@ -4,7 +4,27 @@ const psiApi = new PsiRequest('');
 
 // 獲取數據
 export const fetchPsiData = async (endpoint: string, params?: any) => {
-  return await psiApi.get(endpoint, params);
+  return await psiApi.get(endpoint, params); // params 自動編碼為查詢參數
+};
+// 獲取單隻資料
+export const fetchSingleData = async (endpoint: string, id: string | number, params?: any) => {
+  try {
+    // 構建完整的請求 URL
+    const fullUrl = `${endpoint}/${id}`;
+    
+    // 檢查 params 是否有效
+    const hasValidParams = params && Object.keys(params).length > 0;
+    
+    // 如果有有效的 params，則傳遞 params，否則只傳 URL
+    const response = hasValidParams
+      ? await psiApi.get(fullUrl, { params })
+      : await psiApi.get(fullUrl);
+
+    return response; // 返回後端返回的數據
+  } catch (error) {
+    console.error('Fetch single data failed:', error.message);
+    throw error; // 錯誤處理
+  }
 };
 
 
