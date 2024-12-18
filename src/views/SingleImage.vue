@@ -21,18 +21,23 @@
     <div v-if="showToast" :class="['toast', toastType]">{{ toastMessage }}</div>
   </div>
   <div style="justify-content: center; display: flex">
-    <button @click="submitImage" class="submit-btn">提交圖片設定</button>
+    <button @click="submitImage" class="submit-btn">
+      {{ mode === 'edit' ? '更新圖片設定' : '提交圖片設定' }}
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { uploadImage } from '../api/axios/psiApi'
-import { addComponent } from '../api/axios/componentApi'
-
+import { addComponent, getComponentById, updateComponent } from '../api/axios/componentApi'
+import { useRoute, useRouter } from 'vue-router'
 // 單一圖片狀態
 const image = ref<{ url: string; link: string; id: number | null }>({ url: '', link: '', id: null })
-
+const route = useRoute()
+const router = useRouter()
+const mode = route.query.mode
+const componentId = route.query.componentId
 // Toast 狀態
 const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
@@ -58,12 +63,11 @@ const handleFileChange = async (event: Event) => {
 
   try {
     const response = await uploadImage(formData)
-    const { id, url } = response
-    image.value.url = url
-    image.value.id = id
+    const { url } = response // 僅提取圖片 URL
+    image.value.url = url // 更新圖片 URL
     showToastMessage('圖片上傳成功！', 'success')
   } catch (error) {
-    console.error('Failed to upload image:', error.message)
+    console.error('圖片上傳失敗:', error.message)
     showToastMessage('圖片上傳失敗！', 'error')
   }
 }
@@ -76,27 +80,77 @@ const deleteImage = () => {
 // 提交圖片設定
 const submitImage = async () => {
   const payload = {
-    name: 'Single Image Example',
-    type: 'SINGLE_IMAGE',
-    companyId: 1,
+    name: '', // 新增時的名稱
+    type: 'SINGLE_IMAGE', // 固定類型
+    companyId: 1, // 公司 ID，可根據需求動態設定
     urls: [
       {
         imageUrl: image.value.url,
         navUrl: image.value.link
       }
     ],
-    sortType: '',
-    products: []
+    sortType: '', // 排序類型，根據需要填充
+    products: [] // 預設為空
   }
 
   try {
-    await addComponent(payload)
-    showToastMessage('提交成功！', 'success')
+    if (mode === 'edit') {
+      // 編輯模式
+      await updateComponent(componentId, {
+        urls: [
+          {
+            sequence: 0,
+            imageUrl: image.value.url,
+            navUrl: image.value.link,
+            ...(image.value.id ? { id: image.value.id } : {})
+          }
+        ]
+      }) // 使用更新 API
+      showToastMessage('更新成功！', 'success')
+      setTimeout(() => {
+        router.push({ name: 'kitHome' })
+      }, 3000)
+    } else {
+      // 新增模式
+      await addComponent(payload) // 使用新增 API
+      showToastMessage('提交成功！', 'success')
+      setTimeout(() => {
+        router.push({ name: 'kitHome' })
+      }, 3000)
+    }
   } catch (error) {
-    console.error('提交失敗:', error.message)
+    console.error(mode === 'edit' ? '更新失敗:' : '新增失敗:', error.message)
     showToastMessage('提交失敗，請重試！', 'error')
   }
 }
+
+const fetchComponentData = async () => {
+  if (mode === 'edit' && componentId) {
+    try {
+      const response = await getComponentById(Number(componentId))
+      const { urls } = response
+
+      if (urls && urls.length > 0) {
+        const [firstUrl] = urls
+        image.value = {
+          url: firstUrl.imageUrl,
+          link: firstUrl.navUrl,
+          id: firstUrl.id
+        }
+      }
+      // showToastMessage('數據加載成功！', 'success')
+    } catch (error) {
+      console.error('獲取數據失敗:', error.message)
+      // showToastMessage('獲取數據失敗！', 'error')
+    }
+  }
+}
+
+onMounted(() => {
+  if (mode && componentId) {
+    fetchComponentData()
+  }
+})
 </script>
 
 <style scoped>

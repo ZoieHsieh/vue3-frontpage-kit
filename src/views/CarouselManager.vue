@@ -28,19 +28,24 @@
       </div>
     </div>
     <button @click="addImage" class="add-image-btn">新增圖片</button>
-    <button @click="submitCarousel" class="submit-btn">提交輪播設定</button>
+    <button @click="submitCarousel" class="submit-btn">
+      {{ mode === 'edit' ? '更新輪播設定' : '提交輪播設定' }}
+    </button>
   </div>
-   <!-- Toast 提示框 -->
-   <div v-if="showToast" :class="['toast', toastType]">{{ toastMessage }}</div>
+  <!-- Toast 提示框 -->
+  <div v-if="showToast" :class="['toast', toastType]">{{ toastMessage }}</div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { uploadImage } from '../api/axios/psiApi'
-import { addComponent } from '../api/axios/componentApi'
-
+import { addComponent, getComponentById, updateComponent } from '../api/axios/componentApi'
+import { useRoute, useRouter } from 'vue-router'
 const images = ref([{ url: '', link: '', sequence: 1, id: null }])
-
+const route = useRoute()
+const router = useRouter()
+const mode = route.query.mode
+const componentId = route.query.componentId
 // Toast 狀態
 const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
@@ -98,9 +103,8 @@ const handleFileChange = async (event: Event, index: number) => {
 
   try {
     const response = await uploadImage(formData)
-    const { id, url } = response
-    images.value[index].url = url
-    images.value[index].id = id
+    const { url } = response // 獲取圖片 URL
+    images.value[index].url = url // 僅更新圖片 URL
     showToastMessage('圖片上傳成功！', 'success')
   } catch (error) {
     console.error('Failed to upload image:', error.message)
@@ -110,28 +114,80 @@ const handleFileChange = async (event: Event, index: number) => {
 
 // 提交輪播設定
 const submitCarousel = async () => {
-  const payload = {
-    name: 'Image Carousel Example',
-    type: 'IMAGE_CAROUSEL',
-    companyId: 1,
-    urls: images.value.map((image) => ({
-      imageId: image.id,
-      imageUrl: image.url,
-      navUrl: image.link,
-      sequence: image.sequence
-    })),
-    sortType: '',
-    products: []
+  let payload
+
+  if (mode === 'edit') {
+    // 編輯模式 - 傳遞已有項目及其 ID
+    payload = {
+      urls: images.value.map((image) => ({
+        id: image.id || null, // 保留項目 ID（新增項目則為 null）
+        imageUrl: image.url, // 圖片的 URL
+        navUrl: image.link, // 導航連結
+        sequence: image.sequence // 順序
+      }))
+    }
+  } else {
+    // 新增模式 - 全量資料
+    payload = {
+      name: 'Image Carousel Example',
+      type: 'IMAGE_CAROUSEL',
+      companyId: 1,
+      urls: images.value.map((image) => ({
+        id: null, // 新增項目無 ID
+        imageUrl: image.url,
+        navUrl: image.link,
+        sequence: image.sequence
+      })),
+      sortType: '',
+      products: []
+    }
   }
 
   try {
-    await addComponent(payload)
-    showToastMessage('提交成功！', 'success')
+    if (mode === 'edit') {
+      // 使用 updateComponent API
+      await updateComponent(componentId, payload)
+      showToastMessage('更新成功！', 'success')
+      setTimeout(() => {
+        router.push({ name: 'kitHome' })
+      }, 3000)
+    } else {
+      // 使用 addComponent API
+      await addComponent(payload)
+      showToastMessage('提交成功！', 'success')
+      setTimeout(() => {
+        router.push({ name: 'kitHome' })
+      }, 3000)
+    }
   } catch (error) {
-    console.error('新增組件失敗:', error.message)
-    showToastMessage('提交失敗，請重試！', 'error')
+    console.error(mode === 'edit' ? '更新組件失敗:' : '新增組件失敗:', error.message)
+    showToastMessage(mode === 'edit' ? '更新失敗，請重試！' : '提交失敗，請重試！', 'error')
   }
 }
+
+//取得編輯模式的元件資料
+const fetchComponentData = async () => {
+  try {
+    const response = await getComponentById(componentId)
+    const { urls } = response
+    images.value = urls.map((item) => ({
+      id: item.id,
+      url: item.imageUrl,
+      link: item.navUrl,
+      sequence: item.sequence
+    }))
+    showToastMessage('載入資料成功！', 'success')
+  } catch (error) {
+    showToastMessage('無法取得元件資料！', 'error')
+  }
+}
+
+// 初始化，判斷是否為編輯模式
+onMounted(() => {
+  if (mode && componentId) {
+    fetchComponentData()
+  }
+})
 </script>
 
 <style scoped>
@@ -308,7 +364,9 @@ h3 {
   color: #fff;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-  animation: slideIn 0.5s ease, fadeOut 0.5s ease 2.5s forwards;
+  animation:
+    slideIn 0.5s ease,
+    fadeOut 0.5s ease 2.5s forwards;
 }
 
 .toast.success {
@@ -336,5 +394,4 @@ h3 {
     opacity: 0;
   }
 }
-
 </style>

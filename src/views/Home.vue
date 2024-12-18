@@ -56,28 +56,52 @@
             </div>
           </div>
         </div>
-        <div v-if="component.type === 'PRODUCT_GROUP'" class="product-group">
-          <h4>商品群組</h4>
-          <div class="product-list">
-            <div
-              v-for="product in productDetailsMap[component.id]"
-              :key="product.id"
-              class="product-card"
-            >
-              <!-- 顯示商品圖片或占位符 -->
-              <div class="product-image-container">
-                <img
-                  :src="getProductImage(product.productImageList)"
-                  alt="商品圖片"
-                  class="product-image"
-                />
+        <div>
+          <!-- 商品群組（PRODUCT_GROUP） -->
+          <div v-if="component.type === 'PRODUCT_GROUP'" class="product-group">
+            <h4>商品群組</h4>
+            <div class="product-list">
+              <div
+                v-for="product in productDetailsMap[component.id]"
+                :key="product.id"
+                class="product-card"
+              >
+                <div class="product-image-container">
+                  <img
+                    :src="getProductImage(product.productImageList)"
+                    alt="商品圖片"
+                    class="product-image"
+                  />
+                </div>
+                <h4 class="product-name">{{ product.name }}</h4>
+                <p class="product-code">貨號：{{ product.code }}</p>
+                <p class="product-price">價格：{{ product.sellPriceRange || '未設定' }}</p>
               </div>
-              <h4 class="product-name">{{ product.name }}</h4>
-              <p class="product-code">貨號：{{ product.code }}</p>
-              <p class="product-price">價格：{{ product.sellPriceRange || '未設定' }}</p>
+            </div>
+          </div>
+
+          <!-- 產品分類（PRODUCT_CATEGORY） -->
+          <div v-if="component.type === 'PRODUCT_CATEGORY'" class="product-category">
+            <h4>產品分類</h4>
+            <div class="product-list">
+              <!-- 主分類 -->
+              <div
+                v-for="category in productDetailsMap[component.id]"
+                :key="category.id"
+                class="product-card"
+              >
+                <div class="product-image-container">
+                  <img :src="category.imageUrl" alt="分類圖片" class="product-image" />
+                </div>
+                <h4 class="product-name">{{ category.name }}</h4>
+                <p class="product-code">分類 ID：{{ category.id }}</p>
+
+                
+              </div>
             </div>
           </div>
         </div>
+
         <!-- 確認刪除對話框 -->
         <div v-if="isConfirmDialogVisible" class="dialog-overlay">
           <div class="dialog">
@@ -121,6 +145,8 @@ const fetchComponents = async () => {
     for (const component of components.value) {
       if (component.type === 'PRODUCT_GROUP' && component.products) {
         await fetchProductDetails(component.id, component.products)
+      } else if (component.type === 'PRODUCT_CATEGORY' && component.productCategories) {
+        await fetchCategoryDetails(component.id, component.productCategories)
       }
     }
     console.log('Components:', components.value)
@@ -128,6 +154,31 @@ const fetchComponents = async () => {
     console.error('Error fetching components:', error)
   }
 }
+const fetchCategoryDetails = async (componentId: number, productCategories: any[]) => {
+  try {
+    const categoryIdList = productCategories
+      .map((category) => `productCategoryIdList=${category.productCategoryId}`)
+      .join('&')
+
+    const fullUrl = `product-category/list?perPage=10&currentPage=1&${categoryIdList}`
+
+    const response = await fetchPsiData(fullUrl)
+
+    // 提取每個分類的圖片與基本資訊
+    const details = (response.dataList || []).map((category: any) => ({
+      id: category.id,
+      name: category.name,
+      imageUrl: category.image?.url || '', // 提取圖片 URL
+      children: category.childrenProductCategoryList || [] // 子分類
+    }))
+
+    productDetailsMap.value[componentId] = details
+  } catch (error) {
+    console.error('Error fetching category details:', error.message)
+  }
+}
+
+
 // 更新排序 API 方法
 const updateSortOrder = async (changes: { id: number; sortOrder: number }[]) => {
   try {
@@ -269,6 +320,30 @@ const selectComponent = (type: string) => {
     router.push({ path: '/kit/singleimage' })
   }
   isDialogVisible.value = false // 關閉 Dialog
+}
+const editComponent = (component: any) => {
+  const type = component.type
+
+  switch (type) {
+    case 'PRODUCT_GROUP':
+      router.push({ path: '/kit/productgroup', query: { mode: 'edit', componentId: component.id } })
+      break
+
+    case 'IMAGE_CAROUSEL':
+      router.push({ name: 'kitCarousel', query: { mode: 'edit', componentId: component.id } })
+      break
+
+    case 'PRODUCT_CATEGORY':
+      router.push({ path: '/kit/category', query: { mode: 'edit', componentId: component.id } })
+      break
+
+    case 'SINGLE_IMAGE':
+      router.push({ path: '/kit/singleimage', query: { mode: 'edit', componentId: component.id } })
+      break
+
+    default:
+      console.error(`Unsupported component type: ${type}`)
+  }
 }
 </script>
 

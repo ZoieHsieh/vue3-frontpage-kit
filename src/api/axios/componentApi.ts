@@ -21,3 +21,12 @@ export const deleteComponent = async (componentId: number) => {
 export const reorderComponents = async (data: { id: number; sortOrder: number }[]) => {
   return await service.patch('/component/action/reorder', data);
 };
+// 獲取單筆組件資料
+export const getComponentById = async (componentId: number) => {
+  return await service.get(`component/${componentId}`);
+};
+
+// 更新組件資料
+export const updateComponent = async (componentId: number, data: any) => {
+  return await service.patch(`component/${componentId}`, data);
+};
