@@ -4,7 +4,7 @@
     {{ toastMessage }}
   </div>
   <div class="tree-table">
-    <h2>產品類別設定</h2>
+    <h2>商品類別設定</h2>
 
     <!-- Dropdown Container -->
     <div class="dropdown-container">
@@ -151,6 +151,8 @@ const moveItem = (index: number, direction: number) => {
 const submitCategories = async () => {
   const payload = {
     name: mode === 'edit' ? 'Updated Component' : 'New Component',
+    type: 'PRODUCT_CATEGORY', // 確保新增時包含 type
+    companyId: 1, // 確保新增時包含 companyId
     productCategories: categorySequence.value.map((item) => ({
       ...(item.id ? { id: item.id } : {}), // 只有已存在的項目包含 id
       productCategoryId: item.productCategoryId,
@@ -181,6 +183,7 @@ const submitCategories = async () => {
     showToastMessage('提交失敗，請重試。', 'error')
   }
 }
+
 // Toast 提示函數
 const showToastMessage = (message: string, type: 'success' | 'error') => {
   toastMessage.value = message

@@ -1,4 +1,8 @@
 <template>
+    <!-- Toast 提示框 -->
+    <div v-if="showToast" :class="['toast', toastType]">
+    {{ toastMessage }}
+  </div>
   <div class="home-page">
     <!-- <h2>Home Page</h2> -->
     <div style="justify-content: end; display: flex">
@@ -12,7 +16,7 @@
         <ul class="component-list">
           <li @click="selectComponent('carousel')">輪播元件</li>
           <li @click="selectComponent('category')">分類按鈕</li>
-          <li @click="selectComponent('product')">分類商品</li>
+          <li @click="selectComponent('product')">商品群組</li>
           <li @click="selectComponent('image')">圖片元件</li>
         </ul>
         <button @click="closeDialog" class="close-dialog-btn">取消</button>
@@ -129,8 +133,22 @@ const router = useRouter()
 const isDialogVisible = ref(false)
 const selectedComponent = ref<string | null>(null)
 const components = ref<any[]>([])
-
+// Toast 狀態
+const toastMessage = ref('')
+const toastType = ref('') // 'success' or 'error'
+const showToast = ref(false)
 const productDetailsMap = ref<{ [key: number]: any[] }>({})
+
+// Toast 提示函數
+const showToastMessage = (message: string, type: 'success' | 'error') => {
+  toastMessage.value = message
+  toastType.value = type
+  showToast.value = true
+  setTimeout(() => {
+    showToast.value = false
+  }, 3000)
+}
+
 // 排序元件列表
 const sortComponents = () => {
   components.value.sort((a, b) => a.sortOrder - b.sortOrder)
@@ -259,7 +277,7 @@ const fetchProductDetails = async (componentId: number, products: any[]) => {
     console.error('Error fetching product details:', error.message)
   }
 }
-const defaultImageUrl = '../../../../public/layout/default.jpg'
+const defaultImageUrl = '/layout/default.jpg'
 
 // 返回商品圖片或預設圖片
 const getProductImage = (productImageList: any[]) => {
@@ -292,7 +310,9 @@ const deleteComponentItem = async () => {
         (component) => component.id !== currentComponentId.value
       )
       console.log(`Component with ID ${currentComponentId.value} deleted successfully.`)
+      showToastMessage('刪除成功', 'success')
     } catch (error) {
+      showToastMessage('刪除失敗', 'error')
       console.error('Error deleting component:', error)
     } finally {
       isConfirmDialogVisible.value = false
@@ -348,6 +368,49 @@ const editComponent = (component: any) => {
 </script>
 
 <style scoped>
+/* Toast 容器 */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 15px 100px;
+  border-radius: 8px;
+  color: white;
+  font-size: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  animation:
+    slideIn 0.5s ease,
+    fadeOut 0.5s ease 2.5s forwards;
+}
+
+/* 成功樣式 */
+.toast.success {
+  background-color: #2ecc71; /* 綠色 */
+}
+
+/* 錯誤樣式 */
+.toast.error {
+  background-color: #f44336; /* 紅色 */
+}
+
+/* Toast 動畫 */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+  }
+}
 .components-list {
   display: flex;
   flex-direction: column;
