@@ -32,12 +32,14 @@ import { ref, onMounted } from 'vue'
 import { uploadImage } from '../api/axios/psiApi'
 import { addComponent, getComponentById, updateComponent } from '../api/axios/componentApi'
 import { useRoute, useRouter } from 'vue-router'
+import Cookie from 'js-cookie'
 // 單一圖片狀態
 const image = ref<{ url: string; link: string; id: number | null }>({ url: '', link: '', id: null })
 const route = useRoute()
 const router = useRouter()
 const mode = route.query.mode
 const componentId = route.query.componentId
+const companyId = Cookie.get('companyId')
 // Toast 狀態
 const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
@@ -82,7 +84,7 @@ const submitImage = async () => {
   const payload = {
     name: '', // 新增時的名稱
     type: 'SINGLE_IMAGE', // 固定類型
-    companyId: 1, // 公司 ID，可根據需求動態設定
+    companyId: Number(companyId), // 公司 ID，可根據需求動態設定
     urls: [
       {
         imageUrl: image.value.url,

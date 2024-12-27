@@ -66,7 +66,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { fetchPsiData } from '../api/axios/psiApi'
 import { getComponentById, addComponent, updateComponent } from '../api/axios/componentApi'
 import { useRoute, useRouter } from 'vue-router'
-
+import Cookie from 'js-cookie'
 // 狀態變量
 const loading = ref(true)
 const dropdownOpen = ref(false) // 控制下拉選單展開/收合
@@ -78,7 +78,7 @@ const router = useRouter()
 const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
 const showToast = ref(false)
-
+const companyId = Cookie.get('companyId')
 const route = useRoute()
 const mode = route.query.mode
 const componentId = route.query.componentId
@@ -152,7 +152,7 @@ const submitCategories = async () => {
   const payload = {
     name: mode === 'edit' ? 'Updated Component' : 'New Component',
     type: 'PRODUCT_CATEGORY', // 確保新增時包含 type
-    companyId: 1, // 確保新增時包含 companyId
+    companyId: Number(companyId), // 確保新增時包含 companyId
     productCategories: categorySequence.value.map((item) => ({
       ...(item.id ? { id: item.id } : {}), // 只有已存在的項目包含 id
       productCategoryId: item.productCategoryId,

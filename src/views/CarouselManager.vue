@@ -41,6 +41,7 @@ import { ref, onMounted } from 'vue'
 import { uploadImage } from '../api/axios/psiApi'
 import { addComponent, getComponentById, updateComponent } from '../api/axios/componentApi'
 import { useRoute, useRouter } from 'vue-router'
+import Cookie from 'js-cookie'
 const images = ref([{ url: '', link: '', sequence: 1, id: null }])
 const route = useRoute()
 const router = useRouter()
@@ -50,7 +51,7 @@ const componentId = route.query.componentId
 const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
 const showToast = ref(false)
-
+const companyId = Cookie.get('companyId')
 // 顯示 Toast 方法
 const showToastMessage = (message: string, type: 'success' | 'error') => {
   toastMessage.value = message
@@ -131,7 +132,7 @@ const submitCarousel = async () => {
     payload = {
       name: 'Image Carousel Example',
       type: 'IMAGE_CAROUSEL',
-      companyId: 1,
+      companyId: Number(companyId),
       urls: images.value.map((image) => ({
         id: null, // 新增項目無 ID
         imageUrl: image.url,
@@ -187,6 +188,7 @@ onMounted(() => {
   if (mode && componentId) {
     fetchComponentData()
   }
+  console.log('componyId', componyId)
 })
 </script>
 

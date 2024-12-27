@@ -82,11 +82,12 @@ import { ref, onMounted, watch } from 'vue'
 import { fetchPsiData } from '../api/axios/psiApi'
 import { getComponentById, addComponent, updateComponent } from '../api/axios/componentApi'
 import { useRoute, useRouter } from 'vue-router'
+import Cookie from 'js-cookie'
 // Toast 狀態
 const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
 const showToast = ref(false)
-
+const companyId = Cookie.get('companyId')
 // 狀態變數
 const groupName = ref('')
 const groupMethod = ref('auto')
@@ -234,7 +235,7 @@ const addProductGroup = async () => {
     payload = {
       name: groupName.value,
       type: 'PRODUCT_GROUP',
-      companyId: 1,
+      companyId: Number(companyId),
       urls: [],
       sortType: groupMethod.value === 'auto' ? 'SYSTEM' : 'MANUAL',
       products:
