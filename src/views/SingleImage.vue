@@ -45,6 +45,19 @@ const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
 const showToast = ref(false)
 
+//驗證欄位是否填寫
+const validateImage = (): boolean => {
+  if (!image.value.url) {
+    showToastMessage('請上傳圖片！', 'error')
+    return false
+  }
+  if (!image.value.link) {
+    showToastMessage('請輸入導航網址！', 'error')
+    return false
+  }
+  return true
+}
+
 // 顯示 Toast 方法
 const showToastMessage = (message: string, type: 'success' | 'error') => {
   toastMessage.value = message
@@ -81,6 +94,11 @@ const deleteImage = () => {
 
 // 提交圖片設定
 const submitImage = async () => {
+  // 驗證資料是否完整
+  if (!validateImage()) {
+    return;
+  }
+
   const payload = {
     name: '', // 新增時的名稱
     type: 'SINGLE_IMAGE', // 固定類型
@@ -93,7 +111,7 @@ const submitImage = async () => {
     ],
     sortType: '', // 排序類型，根據需要填充
     products: [] // 預設為空
-  }
+  };
 
   try {
     if (mode === 'edit') {
@@ -107,24 +125,24 @@ const submitImage = async () => {
             ...(image.value.id ? { id: image.value.id } : {})
           }
         ]
-      }) // 使用更新 API
-      showToastMessage('更新成功！', 'success')
+      });
+      showToastMessage('更新成功！', 'success');
       setTimeout(() => {
-        router.push({ name: 'kitHome' })
-      }, 3000)
+        router.push({ name: 'kitHome' });
+      }, 3000);
     } else {
       // 新增模式
-      await addComponent(payload) // 使用新增 API
-      showToastMessage('提交成功！', 'success')
+      await addComponent(payload);
+      showToastMessage('提交成功！', 'success');
       setTimeout(() => {
-        router.push({ name: 'kitHome' })
-      }, 3000)
+        router.push({ name: 'kitHome' });
+      }, 3000);
     }
   } catch (error) {
-    console.error(mode === 'edit' ? '更新失敗:' : '新增失敗:', error.message)
-    showToastMessage('提交失敗，請重試！', 'error')
+    console.error(mode === 'edit' ? '更新失敗:' : '新增失敗:', error.message);
+    showToastMessage(mode === 'edit' ? '更新失敗，請重試！' : '提交失敗，請重試！', 'error');
   }
-}
+};
 
 const fetchComponentData = async () => {
   if (mode === 'edit' && componentId) {

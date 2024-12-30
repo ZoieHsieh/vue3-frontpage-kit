@@ -180,7 +180,7 @@ const submitCategories = async () => {
     }
   } catch (error) {
     console.error(mode === 'edit' ? '更新失敗:' : '新增失敗:', error.message)
-    showToastMessage('提交失敗，請重試。', 'error')
+    showToastMessage(`提交失敗，請重試。${error?.data.message}`, 'error')
   }
 }
 

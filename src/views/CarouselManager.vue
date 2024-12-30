@@ -52,6 +52,16 @@ const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
 const showToast = ref(false)
 const companyId = Cookie.get('companyId')
+//驗證欄位是否填寫
+const validateImages = (): boolean => {
+  for (const [index, image] of images.value.entries()) {
+    if (!image.url || !image.link) {
+      showToastMessage(`圖片 ${index + 1} 的 URL 或導航連結未填寫！`, 'error');
+      return false;
+    }
+  }
+  return true;
+};
 // 顯示 Toast 方法
 const showToastMessage = (message: string, type: 'success' | 'error') => {
   toastMessage.value = message
@@ -115,7 +125,12 @@ const handleFileChange = async (event: Event, index: number) => {
 
 // 提交輪播設定
 const submitCarousel = async () => {
-  let payload
+  // 驗證資料是否完整
+  if (!validateImages()) {
+    return;
+  }
+
+  let payload;
 
   if (mode === 'edit') {
     // 編輯模式 - 傳遞已有項目及其 ID
@@ -124,47 +139,47 @@ const submitCarousel = async () => {
         id: image.id || null, // 保留項目 ID（新增項目則為 null）
         imageUrl: image.url, // 圖片的 URL
         navUrl: image.link, // 導航連結
-        sequence: image.sequence // 順序
-      }))
-    }
+        sequence: image.sequence, // 順序
+      })),
+    };
   } else {
     // 新增模式 - 全量資料
     payload = {
-      name: 'Image Carousel Example',
+      name: '',
       type: 'IMAGE_CAROUSEL',
       companyId: Number(companyId),
       urls: images.value.map((image) => ({
         id: null, // 新增項目無 ID
         imageUrl: image.url,
         navUrl: image.link,
-        sequence: image.sequence
+        sequence: image.sequence,
       })),
       sortType: '',
-      products: []
-    }
+      products: [],
+    };
   }
 
   try {
     if (mode === 'edit') {
       // 使用 updateComponent API
-      await updateComponent(componentId, payload)
-      showToastMessage('更新成功！', 'success')
+      await updateComponent(componentId, payload);
+      showToastMessage('更新成功！', 'success');
       setTimeout(() => {
-        router.push({ name: 'kitHome' })
-      }, 3000)
+        router.push({ name: 'kitHome' });
+      }, 3000);
     } else {
       // 使用 addComponent API
-      await addComponent(payload)
-      showToastMessage('提交成功！', 'success')
+      await addComponent(payload);
+      showToastMessage('提交成功！', 'success');
       setTimeout(() => {
-        router.push({ name: 'kitHome' })
-      }, 3000)
+        router.push({ name: 'kitHome' });
+      }, 3000);
     }
   } catch (error) {
-    console.error(mode === 'edit' ? '更新組件失敗:' : '新增組件失敗:', error.message)
-    showToastMessage(mode === 'edit' ? '更新失敗，請重試！' : '提交失敗，請重試！', 'error')
+    console.error(mode === 'edit' ? '更新組件失敗:' : '新增組件失敗:', error.message);
+    showToastMessage(mode === 'edit' ? '更新失敗，請重試！' : '提交失敗，請重試！', 'error');
   }
-}
+};
 
 //取得編輯模式的元件資料
 const fetchComponentData = async () => {
@@ -188,7 +203,7 @@ onMounted(() => {
   if (mode && componentId) {
     fetchComponentData()
   }
-  console.log('componyId', componyId)
+  // console.log('componyId', componyId)
 })
 </script>
 

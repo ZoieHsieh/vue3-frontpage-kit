@@ -1,6 +1,6 @@
 <template>
-    <!-- Toast 提示框 -->
-    <div v-if="showToast" :class="['toast', toastType]">
+  <!-- Toast 提示框 -->
+  <div v-if="showToast" :class="['toast', toastType]">
     {{ toastMessage }}
   </div>
   <div class="home-page">
@@ -99,8 +99,6 @@
                 </div>
                 <h4 class="product-name">{{ category.name }}</h4>
                 <p class="product-code">分類 ID：{{ category.id }}</p>
-
-                
               </div>
             </div>
           </div>
@@ -127,6 +125,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getComponentsList, deleteComponent, reorderComponents } from '../api/axios/componentApi' //
 import { fetchPsiData } from '../api/axios/psiApi'
+import Cookie from 'js-cookie'
 const isConfirmDialogVisible = ref(false)
 const currentComponentId = ref<number | null>(null)
 const router = useRouter()
@@ -138,7 +137,7 @@ const toastMessage = ref('')
 const toastType = ref('') // 'success' or 'error'
 const showToast = ref(false)
 const productDetailsMap = ref<{ [key: number]: any[] }>({})
-
+const companyId = Cookie.get('companyId')
 // Toast 提示函數
 const showToastMessage = (message: string, type: 'success' | 'error') => {
   toastMessage.value = message
@@ -156,22 +155,32 @@ const sortComponents = () => {
 // 獲取元件列表
 const fetchComponents = async () => {
   try {
-    const response = await getComponentsList(0, 10, 1)
+    // 假設 companyId 是從外部取得的
+    const companyId = Cookie.get('companyId') // 動態獲取公司 ID 的函式
+
+    const response = await getComponentsList(0, 10, companyId)
     components.value = response.list || []
     sortComponents()
 
+    // 處理每個 component 的詳細資料
     for (const component of components.value) {
-      if (component.type === 'PRODUCT_GROUP' && component.products) {
-        await fetchProductDetails(component.id, component.products)
-      } else if (component.type === 'PRODUCT_CATEGORY' && component.productCategories) {
-        await fetchCategoryDetails(component.id, component.productCategories)
+      try {
+        if (component.type === 'PRODUCT_GROUP' && component.products) {
+          await fetchProductDetails(component.id, component.products)
+        } else if (component.type === 'PRODUCT_CATEGORY' && component.productCategories) {
+          await fetchCategoryDetails(component.id, component.productCategories)
+        }
+      } catch (fetchError) {
+        console.error(`Error fetching details for component ID ${component.id}:`, fetchError)
       }
     }
+
     console.log('Components:', components.value)
   } catch (error) {
     console.error('Error fetching components:', error)
   }
 }
+
 const fetchCategoryDetails = async (componentId: number, productCategories: any[]) => {
   try {
     const categoryIdList = productCategories
@@ -195,7 +204,6 @@ const fetchCategoryDetails = async (componentId: number, productCategories: any[
     console.error('Error fetching category details:', error.message)
   }
 }
-
 
 // 更新排序 API 方法
 const updateSortOrder = async (changes: { id: number; sortOrder: number }[]) => {

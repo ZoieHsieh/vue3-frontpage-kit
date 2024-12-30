@@ -53,7 +53,16 @@
             <span>{{ product.code }}</span>
           </div>
         </div>
-
+        <!-- 分頁按鈕 -->
+        <div class="pagination">
+          <button @click="prevPage" :disabled="currentPage === 1" class="pagination-btn">
+            上一頁
+          </button>
+          <span>頁碼 {{ currentPage }} / {{ totalPages }}</span>
+          <button @click="nextPage" :disabled="currentPage === totalPages" class="pagination-btn">
+            下一頁
+          </button>
+        </div>
         <div class="dialog-actions">
           <button @click="closeProductDialog" class="save-selection-btn">完成</button>
           <button @click="closeProductDialog" class="cancel-btn">取消</button>
@@ -93,9 +102,10 @@ const groupName = ref('')
 const groupMethod = ref('auto')
 const selectedProducts = ref<any[]>([])
 const products = ref<any[]>([])
+const currentPage = ref(1) // 當前頁碼
+const totalPages = ref(0) // 總頁數
+const rowsPerPage = ref(10) // 每頁顯示的記錄數
 const totalRecords = ref(0)
-const currentPage = ref(1)
-const rowsPerPage = ref(5)
 const keyword = ref('')
 const isProductDialogVisible = ref(false)
 const router = useRouter()
@@ -126,27 +136,84 @@ const openProductSelection = () => {
 const closeProductDialog = () => {
   isProductDialogVisible.value = false
 }
+//驗證欄位是否填寫
+const validateGroup = (): boolean => {
+  if (!groupName.value.trim()) {
+    showToastMessage('請輸入商品群組名稱！', 'error')
+    return false
+  }
+  if (groupMethod.value === 'manual' && selectedProducts.value.length === 0) {
+    showToastMessage('手動模式下，請至少選擇一個商品！', 'error')
+    return false
+  }
+  return true
+}
+//切換分頁
+const goToPage = (page: number) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page
+    console.log('Go to page:', currentPage.value)
+    fetchProductList() // 重新獲取數據
+  }
+}
+
+const nextPage = () => {
+  console.log('Next page button clicked. Current page:', currentPage.value, 'Total pages:', totalPages.value);
+  if (totalPages.value === 0) {
+    console.log('No pages available. Total records is 0.');
+    showToastMessage('沒有更多數據可以顯示。', 'error');
+    return;
+  }
+
+  if (currentPage.value < totalPages.value) {
+    currentPage.value++;
+    console.log('Page incremented to:', currentPage.value);
+    fetchProductList(); // 重新加載數據
+  } else {
+    console.log('Already on the last page.');
+  }
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    goToPage(currentPage.value - 1)
+  }
+}
 
 // 獲取商品列表
 const fetchProductList = async () => {
   try {
+    console.log('Fetching products for current page:', currentPage.value);
     const response = await fetchPsiData('product/list', {
       perPage: rowsPerPage.value,
       currentPage: currentPage.value,
       orderBy: 'ID_DESC',
-      keyword: keyword.value || ''
-    })
+      keyword: keyword.value
+    });
 
+    console.log('Full API Response:', response); // 打印完整 API 響應
+
+    // 確保分頁資訊正確提取
+    totalRecords.value = response.paging.totalEntries || 0;
+    totalPages.value = response.paging.totalPages || 0;
+
+    console.log('Total records:', totalRecords.value, 'Rows per page:', rowsPerPage.value);
+    console.log('Calculated total pages:', totalPages.value);
+
+    // 更新商品數據
     products.value = response.dataList.map((product) => ({
       ...product,
       imageUrl: product.productImageList?.[0]?.image?.url || 'https://via.placeholder.com/100x100',
-      selected: !!selectedProducts.value.find((p) => p.id === product.id) // 初始化選中狀態
-    }))
-    totalRecords.value = response.totalRecords || 0
+      selected: !!selectedProducts.value.find((p) => p.id === product.id)
+    }));
+
+    console.log('Products fetched:', products.value);
   } catch (error) {
-    console.error('獲取商品列表失敗:', error.message)
+    console.error('Error fetching product list:', error.message);
+    showToastMessage('無法取得商品列表，請稍後再試！', 'error');
   }
-}
+};
+
 
 // 編輯模式：獲取單筆資料並解析商品
 const fetchComponentData = async () => {
@@ -213,6 +280,11 @@ const removeProduct = (product: any) => {
 
 // 提交商品群組
 const addProductGroup = async () => {
+  // 驗證資料
+  if (!validateGroup()) {
+    return
+  }
+
   let payload: Record<string, any> = {}
 
   if (mode === 'edit') {
@@ -267,7 +339,7 @@ const addProductGroup = async () => {
     }
   } catch (error) {
     console.error('提交失敗:', error.message)
-    showToastMessage('提交失敗，請稍後再試！', 'error')
+    showToastMessage('提交失敗，請重試。', 'error')
   }
 }
 
